@@ -7,6 +7,52 @@ define(['jquery', 'particleconnection', 'firebaseconnection', 'bootstrap'], func
   App.prototype = {
       constructor: App,
       particle: new ParticleConnection(),
+      token: function() {
+        var username = $("#username").val();
+        var password = $("#password").val();
+        this.particle.createToken(username, password);
+/*
+            var username = $("#username").val();
+            var password = $("#password").val();
+            spark.listAccessTokens(username, password, function(err, data) {
+              console.log("List Access tokens errors", err);
+              console.log("List Access tokens", data);
+            });
+            */
+            /*
+            spark.login({accessToken: '7f1d4e04d8634b6d70edd468cc93bfb96b516c66'}).then(
+              function(accessToken) {
+                console.log("Logged in with token", accessToken);
+              },
+              function(error) {
+                console.log("Logged in with token error", error);
+              }
+            )
+            */
+            /*
+            spark.createUser(username, password, function(err, data) {
+              if(!err) {
+                var loginPromise = spark.login({username: username, password: password });
+                loginPromise.then(
+                  function(accessToken) {
+                    console.log('Login successful on user create', accessToken);
+                    spark.listAccessTokens(username, password, function(err, data) {
+                      console.log("List Access tokens errors", err);
+                      console.log("List Access tokens", data);
+                    });
+                  },
+                  function(err) {
+                    console.log('Login failed', err);
+                  }
+                )
+
+              } else {
+                console.log(err);
+              }
+            });
+            */
+
+      },
       login: function() {
           var username = $("#username").val();
           var password = $("#password").val();
@@ -60,7 +106,7 @@ define(['jquery', 'particleconnection', 'firebaseconnection', 'bootstrap'], func
         console.log(this.username);
       },
       initialize: function() {
-          $("#loginButton").click($.proxy(this.login, this));
+          $("#loginButton").click($.proxy(this.token, this));
       }
   };
   return App;

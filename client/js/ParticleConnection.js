@@ -1,4 +1,4 @@
-define([], function() {
+define(['jquery'], function($) {
 
 ParticleConnection = function() {
 
@@ -18,6 +18,46 @@ ParticleConnection.prototype = {
             }
         );
     },
+    createUser: function(username, password, callback) {
+      spark.createUser(username, password, function(err, data) {
+        if (!err) {
+          spark.login({username: username, password: password}).then(
+            function(accessToken) {
+              console.log("First login successful", accessToken);
+              this.createToken(username, password, callback);
+            },
+            function(error) {
+              console.log("First login failed", error);
+              callback(null);
+            }
+          )
+        } else {
+          console.log("Error creating Particle.io user");
+          callback(null);
+        }
+      });
+    },
+    createToken: function(username, password, callback) {
+      console.log(username);
+      console.log(password);
+      $.ajax({
+        type: "POST",
+        url: "https://api.particle.io/oauth/token",
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader ("Authorization", "Basic " + btoa("particle:particle"));
+          xhr.setRequestHeader("Accept", "*/*");
+        },
+        data: {
+          username: username,
+          password: password,
+          expires_in: 0,
+          grant_type: "password"
+        },
+        complete: function(jqXHR, textStatus) {
+          callback(jqXHR.responseJSON);
+        }
+      });
+    }
 };
 
 return ParticleConnection;
