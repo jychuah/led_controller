@@ -1,5 +1,8 @@
 require.config({
   baseUrl: "js/libs",
+  shim : {
+        "../bootstrap" : { "deps" :['jquery'] }
+    },
   paths: {
       jquery: "jquery-2.2.0.min",
       particleconnection: "../ParticleConnection",
