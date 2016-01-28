@@ -1,4 +1,4 @@
-define(['require', 'spark'], function(require) {
+define(['jquery'], function($) {
 
 ParticleConnection = function() {
 
@@ -8,6 +8,7 @@ ParticleConnection.prototype = {
     constructor: ParticleConnection,
 
     login: function(username, password) {
+        console.log("Spark login beginning");
         spark.login({username: username, password: password}).then(
             function(token) {
                 console.log("Token: ", token);
