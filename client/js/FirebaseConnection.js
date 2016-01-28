@@ -8,15 +8,15 @@ FirebaseConnection = function(firebaseUrl) {
 
 FirebaseConnection.prototype = {
     constructor: FirebaseConnection,
-    login: function(username, password) {
+    login: function(username, password, callback) {
         this.fb.authWithPassword({
           "email" : username,
           "password" : password
         }, function(error, authData) {
           if (error) {
-            console.log("Login failed", error);
+            callback(error, null);
           } else {
-            console.log("Authenticated", authData);
+            callback(null, authData);
           }
         })
     }

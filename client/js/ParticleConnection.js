@@ -7,17 +7,17 @@ ParticleConnection = function() {
 ParticleConnection.prototype = {
     constructor: ParticleConnection,
 
-    login: function(username, password) {
+    login: function(username, password, callback) {
         console.log("Spark login beginning");
         spark.login({username: username, password: password}).then(
             function(token) {
-                console.log("Token: ", token);
+              callback(null, token);
             },
             function(error) {
-                console.log("Unable to log in:", error);
+              callback(error, null);
             }
         );
-    }
+    },
 };
 
 return ParticleConnection;
