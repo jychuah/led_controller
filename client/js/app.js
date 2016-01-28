@@ -1,4 +1,4 @@
-define(['jquery', 'particleconnection'], function($, ParticleConnection) {
+define(['jquery', 'particleconnection', 'bootstrap'], function($, ParticleConnection) {
   function App() {
       this.particle = new ParticleConnection();
       $(document).ready(this.initialize.apply(this));
