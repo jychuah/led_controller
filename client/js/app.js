@@ -1,11 +1,10 @@
-define(['jquery', 'lightingcontrollerdata', 'bootstrap'], function($, LightingControllerData) {
+define(['jquery', 'particlebase', 'bootstrap'], function($, ParticleBase) {
   function App() {
-      this.data = new LightingControllerData();
+      this.data = new ParticleBase();
       $(document).ready(this.initialize.apply(this));
   };
   App.prototype = {
       constructor: App,
-      particle: new ParticleConnection(),
       token: function() {
         var username = $("#username").val();
         var password = $("#password").val();

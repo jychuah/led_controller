@@ -8,7 +8,7 @@ require.config({
       jquery: "jquery-2.2.0.min",
       particleconnection: "../ParticleConnection",
       firebaseconnection: "../FirebaseConnection",
-      lightingcontrollerdata: "../LightingControllerData",
+      particlebase: "../ParticleBase",
       app: "../app",
       "bootstrap" :  "bootstrap.min",
       firebase : "firebase"

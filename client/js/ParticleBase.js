@@ -1,9 +1,9 @@
 define(['jquery']['particleconnection'], ['firebaseconnection'], function($, ParticleConnection, FirebaseConnection) {
-  function LightingControllerData() {
+  function ParticleBase() {
     this.particle = new ParticleConnection();
     this.firebase = new FirebaseConnection("https://lighting-controller.firebaseio.com");
   },
-  LightingControllerData.prototype = {
+  ParticleBase.prototype = {
     constructor: LightingControllerData,
     ERROR_PARTICLE_CONNECTION = "Hmm... Something's wrong with the website. Report a bug: ERROR_PARTICLE_CONNECTION",
 
