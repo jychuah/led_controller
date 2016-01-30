@@ -7,6 +7,13 @@ ParticleConnection = function() {
 ParticleConnection.prototype = {
     constructor: ParticleConnection,
 
+    ERROR_PARTICLE_UNREACHABLE: "Particle.io was unreachable.",
+    ERROR_PARTICLE_INVALID_CREDENTIALS: "The supplied username or password for Particle.io was invalid.",
+    ERROR_PARTICLE_SERVER_ERROR: "Particle.io had some type of server error. Please try again later.",
+    ERROR_PARTICLE_UNKNOWN_ERROR: "There was an unknown error while contacting Particle.io.",
+    ERROR_PARTICLE_BAD_RESPONSE: "Particle.io was successfully contacted, but didn't return an Authorization token.",
+    SUCCESS_PARTICLE_TOKEN_RETURNED : "Particle.io returned an access token",
+
     login: function(username, password, callback) {
         console.log("Spark login beginning");
         spark.login({username: username, password: password}).then(
@@ -35,10 +42,17 @@ ParticleConnection.prototype = {
           grant_type: "password"
         },
         complete: function(jqXHR, textStatus) {
-          // callback will return status code and responseJSON upon status 200
-          // or null otherwise.
-          // codes are 0 - unreachable, 200 - ok, 400 - invalid credentials
-          callback(jqXHR.status, jqXHR.status == 200 ? jqXHR.responseJSON : null);
+          // callback called with status constant and data
+          var status = ERROR_PARTICLE_UNKNOWN_ERROR;
+          var data = jqXHR.status == 200 ? jqXHR.responseJSON : null;
+          switch(status) {
+            0 : status = ERROR_PARTICLE_UNREACHABLE; break;
+            200 : stauts = SUCCESS_PARTICLE_TOKEN_RETURNED; break;
+            400 : status = ERROR_PARTICLE_INVALID_CREDENTIALS; break;
+            500 : status = ERROR_PARTICLE_SERVER_ERROR; break;
+            default : status = ERROR_PARTICLE_UNKNOWN_ERROR; break;
+          }
+          callback(status, data);
         }
       });
     }
