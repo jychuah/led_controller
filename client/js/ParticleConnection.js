@@ -18,25 +18,6 @@ ParticleConnection.prototype = {
             }
         );
     },
-    createUser: function(username, password, callback) {
-      spark.createUser(username, password, function(err, data) {
-        if (!err) {
-          spark.login({username: username, password: password}).then(
-            function(accessToken) {
-              console.log("First login successful", accessToken);
-              this.createToken(username, password, callback);
-            },
-            function(error) {
-              console.log("First login failed", error);
-              callback(null);
-            }
-          )
-        } else {
-          console.log("Error creating Particle.io user");
-          callback(null);
-        }
-      });
-    },
     createToken: function(username, password, callback) {
       console.log(username);
       console.log(password);
