@@ -54,7 +54,10 @@ ParticleConnection.prototype = {
           grant_type: "password"
         },
         complete: function(jqXHR, textStatus) {
-          callback(jqXHR.responseJSON);
+          // callback will return status code and responseJSON upon status 200
+          // or null otherwise.
+          // codes are 0 - unreachable, 200 - ok, 400 - invalid credentials
+          callback(jqXHR.status, jqXHR.status == 200 ? jqXHR.responseJSON : null);
         }
       });
     }
