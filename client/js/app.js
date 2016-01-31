@@ -28,6 +28,8 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
             console.log("List devices status: ", status);
             console.log("Device list: ", data);
           });
+          this.data.notifyAllDevicesOn(this.firebase.child('devices').child('configs').child('ownerships').child('particle_id'),
+            'value');
         }
       },
       fb_logout : function() {
