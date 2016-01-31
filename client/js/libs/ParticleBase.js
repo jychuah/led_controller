@@ -56,7 +56,7 @@ define([], function(require) {
     firebaseLoggedIn : function() {
       return this.firebase.getAuth() != null;
     },
-    
+
     buildXHR : function(method, endpoint) {
       var xhr = new XMLHttpRequest();
       xhr.open(method, ParticleBase.ApiUrl + endpoint, true);
@@ -65,29 +65,6 @@ define([], function(require) {
       return xhr;
     },
 
-    // creates token, returns a status code and a
-    // particle.io response json (including accessToken) or null
-    createToken : function(particle_username, particle_password, callback) {
-      var xhr = this.buildXHR("POST", "/oauth/token");
-      xhr.setRequestHeader ("Authorization", "Basic " + btoa("particle:particle"));
-      var ref = this;
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 0 && xhr.status == 0) {
-          callback(ParticleBase.ERROR_PARTICLE_UNREACHABLE, null);
-          return false;
-        };
-        if (xhr.readyState == 4) {
-          var data = xhr.status == 200 ? JSON.parse(xhr.responseText) : null;
-          var status = ref.getParticleXHRStatus(xhr.status, ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED);
-          callback(status, data);
-          return false;
-        }
-      };
-      xhr.send("grant_type=password&expires_in=0&username=" +
-          encodeURIComponent(particle_username) + "&password=" +
-          encodeURIComponent(particle_password));
-      return true;
-    },
 
     getParticleXHRStatus : function (xhrstatus, success) {
       var status = ParticleBase.ERROR_PARTICLEBASE_UNKNOWN;
@@ -113,12 +90,17 @@ define([], function(require) {
     // Lists devices accessible with this user's access token
     // callback first parameter will be passed one of the following:
     // Particle.SUCCESS_PARTICLE_LIST_DEVICES
+    // Particle.ERROR_FIREBASE_NOT_LOGGED_IN
     // Particle.ERROR_PARTICLE_UNREACHABLE
     // Particle.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
     // Particle.ERROR_PARTICLE_SERVER_ERROR
     // If Particle.SUCCESS_PARTICLE_LIST_DEVICES then the
     // second callback parameter will be a list of devices
     listDevices : function(callback) {
+      if (!this.firebaseLoggedIn()) {
+        callback(Particle.ERROR_FIREBASE_NOT_LOGGED_IN, null);
+        return false;
+      }
       var xhr = this.buildXHR("GET", "/v1/devices");
       xhr.setRequestHeader("Authorization", "Bearer " + this.accessToken);
       var ref = this;
@@ -135,17 +117,24 @@ define([], function(require) {
         }
       };
       xhr.send();
+      return true;
     },
 
     // callback will be passed one of the following:
     // Particle.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
     // Particle.ERROR_PARTICLE_UNREACHABLE
     // Particle.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
+    // Particle.ERROR_FIREBASE_NOT_LOGGED_IN
     // Particle.ERROR_PARTICLE_SERVER_ERROR
     testToken : function(callback) {
+      if (!this.firebaseLoggedIn()) {
+        callback(Particle.ERROR_FIREBASE_NOT_LOGGED_IN);
+        return false;
+      }
       this.listDevices(function(status, device_list) {
         callback(status === ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES ? ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN : status);
       });
+      return true;
     },
 
     hasAccessToken : function() {

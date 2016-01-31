@@ -3,7 +3,7 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
       var Firebase = require('firebase');
       this.firebase = new Firebase("https://lighting-controller.firebaseio.com");
       this.data = new ParticleBase(this.firebase);
-      this.data.setAccessTokenCallback(this.accessTokenCallback);
+      this.data.setAccessTokenCallback($.proxy(this.accessTokenCallback, this));
       $(document).ready(this.initialize.apply(this));
   };
   App.prototype = {
@@ -23,6 +23,12 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
       },
       accessTokenCallback : function(status) {
         console.log("Access token callback: ", status);
+        if (status === ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN) {
+          this.data.listDevices(function(status, data) {
+            console.log("List devices status: ", status);
+            console.log("Device list: ", data);
+          });
+        }
       },
       fb_logout : function() {
         this.firebase.unauth();
