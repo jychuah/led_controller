@@ -121,6 +121,8 @@ define([], function(require) {
       return true;
     },
 
+    
+
     // REST publish event wrapper
     // callback first parameter will be passed one of the following:
     // ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT
@@ -148,7 +150,7 @@ define([], function(require) {
         }
       }
       xhr.send("name=" + eventName + "&data=" + encodeURIComponent(data) + "&private=true&ttl=60");
-    }
+    },
 
     // callback will be passed one of the following:
     // ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
