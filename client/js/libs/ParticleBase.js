@@ -13,14 +13,16 @@ define([], function(require) {
         var ref = this;
         var tokenChild = this.firebase.child('ParticleBase').child('users').child('tokens').child(auth.uid);
         tokenChild.on('value', function(dataSnapshot) {
-          if (dataSnapshot.exists()) {
+          if (!dataSnapshot) {
+            if (ref.accessTokenCallback) {
+              ref.accessTokenCallback(ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN);
+            }
+          } else if (dataSnapshot.exists()) {
             ref.accessToken = dataSnapshot.val();
             if (ref.accessTokenCallback) {
               ref.testToken(function(status) {
                 switch(status) {
-                  case ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN : ref.accessTokenCallback(status); break;
-                  case ParticleBase.ERROR_PARTICLE_INVALID_CREDENTIALS : ref.accessTokenCallback(ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN); break;
-                  case ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN : ref.accessTokenCallback(ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN); break;
+                  case null : ref.accessTokenCallback(ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN); break;
                   default : ref.accessTokenCallback(status); break;
                 };
               });
@@ -53,18 +55,15 @@ define([], function(require) {
         case 0 : status = ParticleBase.ERROR_PARTICLE_UNREACHABLE; break;
         case 200 : status = success ? success : null; break;
         case 400 : status = ParticleBase.ERROR_PARTICLE_INVALID_CREDENTIALS; break;
-        case 401 : status = ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN; this.accessToken = null; break; // trap for invalid access token!
+        case 401 : {
+                      status = ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN;
+                      if (this.accessTokenCallback) this.accessTokenCallback(ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN);
+                  };
+                  break;
         case 500 : status = ParticleBase.ERROR_PARTICLE_SERVER_ERROR; break;
         default : status = ParticleBase.ERROR_PARTICLE_UNKNOWN_ERROR; break;
       };
       return status;
-    };
-
-
-    function checkInvalidToken(status) {
-      if (this.accessTokenCallback && status === ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN) {
-        this.accessTokenCallback(status);
-      }
     };
 
     function sanityCheck(callback) {
@@ -85,7 +84,12 @@ define([], function(require) {
     };
 
     // Sets an access token event callback which fires if an accessToken
-    // is missing, invalid, or acquired
+    // is missing, invalid, or acquired.
+    // callback will be triggered with
+    // ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN or one of the following errors:
+    // ParticleBase.ERROR_PARTICLE_INVALID_CREDENTIALS (upon trying to bind a token with a bad username/password)
+    // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN (upon trying to publish an event with an invalid token)
+    // ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN (upon logging in but not detecting an access token)
     // This callback could be used to collect a Particle.io
     // username and password, which can be passed to the bindAccessToken function
     this.setAccessTokenCallback = function(callback) {
@@ -206,7 +210,6 @@ define([], function(require) {
         ref.publishEvent("ParticleBase",
           JSON.stringify(json),
           function(status) {
-            checkInvalidToken(status);
           }
         );
         if (callback) {
@@ -235,7 +238,6 @@ define([], function(require) {
         };
         if (xhr.readyState == 4) {
           var status = getParticleXHRStatus(xhr.status);
-          checkInvalidToken(status);
           callback(status);
           return true;
         }
@@ -255,7 +257,6 @@ define([], function(require) {
       var ref = this;
       this.listDevices(function(status, device_list) {
         callback(status);
-        checkInvalidToken(status);
       });
       return true;
     };
@@ -299,7 +300,6 @@ define([], function(require) {
             }
           } else {
             callback(status);
-            checkInvalidToken(status);
             return false;
           }
           return true;
