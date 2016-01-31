@@ -1,8 +1,27 @@
-define(['require', 'firebase'], function(require) {
-  ParticleBase = function(firebaseUrl) {
-    var Firebase = require('firebase');
-    this.firebase = new Firebase(firebaseUrl);
-
+define([], function(require) {
+  // requires a firebase reference with a child called ParticleBase
+  // also an access token event callback which fires if an accessToken
+  // is missing, invalid, or acquired
+  // This callback could be used to collect a Particle.io
+  // username and password, which can be passed to the bindAccessToken function
+  ParticleBase = function(firebaseRef, accessTokenCallback) {
+    if (firebaseRef == null) {
+      throw "Firebase reference must not be null.";
+    }
+    this.accessToken = null;
+    this.accessTokenCallback = accessTokenCallback;
+    this.firebase = firebaseRef;
+    this.firebase.onAuth(function(auth) {
+      if (auth) {
+        var tokenChild = this.firebase.child('ParticleBase').child('users').child('tokens').child(auth.uid);
+        tokenChild.on('value', function(dataSnapshot) {
+          if (dataSnapshot.exists()) {
+            console.log("Firebase: Access token updated", dataSnapshot.val());
+            this.accessToken = dataSnapshot.val();
+          }
+        }, null, this);
+      }
+    }, this);
   };
 
   ParticleBase.ERROR_PARTICLE_UNREACHABLE = "Particle.io was unreachable.";
@@ -10,11 +29,15 @@ define(['require', 'firebase'], function(require) {
   ParticleBase.ERROR_PARTICLE_SERVER_ERROR = "Particle.io had some type of server error. Please try again later.";
   ParticleBase.ERROR_PARTICLE_UNKNOWN_ERROR = "There was an unknown error while contacting Particle.io.";
   ParticleBase.ERROR_PARTICLE_BAD_RESPONSE = "Particle.io was successfully contacted, but didn't return an Authorization token.";
-  ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED = "Particle.io returned an access token";
+  ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED = "Particle.io returned an access token.";
   ParticleBase.ERROR_PARTICLEBASE_UNKNOWN = "Hmm... Unhandled ParticleBase error.";
-  ParticleBase.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN = "Could not set Particle.io authorization token";
-  ParticleBase.SUCCESS_FIREBASE_SET_PARTICLE_TOKEN = "The Particle.io authorization has been set";
-  ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN = "You are not logged in to Firebase";
+  ParticleBase.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN = "Could not set Particle.io authorization token.";
+  ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN = "ParticleBase has acquired a valid access token.";
+  ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN = "You are not logged in to Firebase.";
+  ParticleBase.SUCCESS_FIREBASE_LOGIN = "Firebase login was successful.";
+  ParticleBase.ERROR_FIREBASE_LOGIN = "Firebase login was unsuccessful.";
+  ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN = "The logged in Firebase user does not yet have an access token from Particle.io.";
+  ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN = "The access token for this Firebase user is currently invalid.";
 
   ParticleBase.prototype = {
     constructor: ParticleBase,
@@ -51,8 +74,13 @@ define(['require', 'firebase'], function(require) {
           encodeURIComponent(particle_password));
       return true;
     },
-    bindToParticle : function(username, password, callback) {
-      this.createToken(username, password, function(status, data) {
+
+    hasAccessToken : function() {
+      return this.accessToken != null;
+    },
+
+    bindAccessToken : function(particle_username, particle_password, callback) {
+      this.createToken(particle_username, particle_password, function(status, data) {
         if (status === ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED) {
           if (data == null) {
             callback(ParticleBase.ERROR_PARTICLEBASE_UNKNOWN);
@@ -68,28 +96,15 @@ define(['require', 'firebase'], function(require) {
               if (error) {
                 callback(ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN);
               } else {
-                callback(SUCCESS_FIREBASE_SET_PARTICLE_TOKEN);
+                callback(SUCCESS_PARTICLEBASE_ACCESS_TOKEN);
               }
             });
-            
           }
         } else {
           callback(status);
         }
       });
     },
-    login : function(username, password, callback) {
-      this.fb.authWithPassword({
-        "email" : username,
-        "password" : password
-      }, function(error, authData) {
-        if (error) {
-          callback(error, null);
-        } else {
-          callback(null, authData);
-        }
-      });
-    }
   };
   return ParticleBase;
 });
