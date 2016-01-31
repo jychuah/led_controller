@@ -51,7 +51,7 @@ define([], function(require) {
       var status = ParticleBase.ERROR_PARTICLEBASE_UNKNOWN;
       switch(xhrstatus) {
         case 0 : status = ParticleBase.ERROR_PARTICLE_UNREACHABLE; break;
-        case 200 : status = success ? success : ParticleBase.SUCCESS_PARTICLE_REST_OPERATION; break;
+        case 200 : status = success ? success : null; break;
         case 400 : status = ParticleBase.ERROR_PARTICLE_INVALID_CREDENTIALS; break;
         case 401 : status = ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN; this.accessToken = null; break; // trap for invalid access token!
         case 500 : status = ParticleBase.ERROR_PARTICLE_SERVER_ERROR; break;
@@ -133,14 +133,13 @@ define([], function(require) {
     };
 
     // Lists devices accessible with this user's access token
-    // callback first parameter will be passed one of the following:
-    // ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES
+    // callback first parameter will be passed null on success or
+    // one of the following errors:
     // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
     // ParticleBase.ERROR_PARTICLE_UNREACHABLE
     // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
     // ParticleBase.ERROR_PARTICLE_SERVER_ERROR
-    // If ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES then the
-    // second callback parameter will be a list of devices
+    // second callback parameter will be a list of devices if no error occurred
     this.listDevices = function(callback) {
       if (!sanityCheck(callback)) {
         return false;
@@ -155,7 +154,7 @@ define([], function(require) {
         };
         if (xhr.readyState == 4) {
           var data = xhr.status == 200 ? JSON.parse(xhr.responseText) : null;
-          var status = getParticleXHRStatus(xhr.status, ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES);
+          var status = getParticleXHRStatus(xhr.status);
           callback(status, data);
           return true;
         }
@@ -217,8 +216,7 @@ define([], function(require) {
     };
 
     // REST publish event wrapper
-    // callback first parameter will be passed one of the following:
-    // ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT
+    // callback will be passed null on success, or one of the following errors:
     // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
     // ParticleBase.ERROR_PARTICLE_UNREACHABLE
     // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
@@ -236,7 +234,7 @@ define([], function(require) {
           return false;
         };
         if (xhr.readyState == 4) {
-          var status = getParticleXHRStatus(xhr.status, ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT);
+          var status = getParticleXHRStatus(xhr.status);
           checkInvalidToken(status);
           callback(status);
           return true;
@@ -245,8 +243,7 @@ define([], function(require) {
       xhr.send("name=" + eventName + "&data=" + encodeURIComponent(data) + "&private=true&ttl=60");
     };
 
-    // callback will be passed one of the following:
-    // ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
+    // callback will be passed null on success, or one of the following errors:
     // ParticleBase.ERROR_PARTICLE_UNREACHABLE
     // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
     // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
@@ -257,19 +254,18 @@ define([], function(require) {
       }
       var ref = this;
       this.listDevices(function(status, device_list) {
-        callback(status === ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES ? ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN : status);
+        callback(status);
         checkInvalidToken(status);
       });
       return true;
     };
 
 
-    // callback will be passed one of the following statuses:
+    // callback will be passed null on success, or one of the following statuses:
     // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
     // ParticleBase.ERROR_PARTICLE_UNREACHABLE
     // ParticleBase.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN
     // ParticleBase.ERROR_PARTICLE_BAD_RESPONSE
-    // ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
     // If successful, the supplied Access Token Callback will be triggered
     // with status ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
     this.bindAccessToken = function(particle_username, particle_password, callback) {
@@ -286,15 +282,15 @@ define([], function(require) {
         };
         if (xhr.readyState == 4) {
           var data = xhr.status == 200 ? JSON.parse(xhr.responseText) : null;
-          var status = getParticleXHRStatus(xhr.status, ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED);
-          if (status === ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED) {
+          var status = getParticleXHRStatus(xhr.status);
+          if (status === null) {
             if ("access_token" in data) {
               var token = data.access_token;
               ref.firebase.child('ParticleBase').child('users').child('tokens').child(ref.firebase.getAuth().uid).set(token, function(error) {
                 if (error) {
                   callback(ParticleBase.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN);
                 } else {
-                  callback(ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN);
+                  callback(null);
                 }
               });
             } else {
@@ -323,16 +319,12 @@ define([], function(require) {
   ParticleBase.ERROR_PARTICLE_SERVER_ERROR = "Particle.io had some type of server error. Please try again later.";
   ParticleBase.ERROR_PARTICLE_UNKNOWN_ERROR = "There was an unknown error while contacting Particle.io.";
   ParticleBase.ERROR_PARTICLE_BAD_RESPONSE = "Particle.io was successfully contacted, but didn't return an Authorization token.";
-  ParticleBase.SUCCESS_PARTICLE_TOKEN_RETURNED = "Particle.io returned an access token.";
   ParticleBase.ERROR_PARTICLEBASE_UNKNOWN = "Hmm... Unhandled ParticleBase error.";
   ParticleBase.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN = "Could not set Particle.io authorization token.";
   ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN = "You are not logged in to Firebase.";
   ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN = "ParticleBase has acquired a valid access token.";
   ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN = "The logged in Firebase user does not yet have an access token from Particle.io.";
   ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN = "The access token for this Firebase user is currently invalid.";
-  ParticleBase.SUCCESS_PARTICLE_REST_OPERATION = "Particle.io REST operation succeeded.";
-  ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES = "Particle.io list device operation succeeded.";
-  ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT = "Particle.io successfully published the event.";
   ParticleBase.ERROR_PARTICLEBASE_LIST_DEVICES = "ParticleBase could not retrieve a list of saved devices.";
   ParticleBase.ERROR_PARTICLEBASE_SAVE_DEVICE = "ParticleBase could not save a device JSON.";
 
