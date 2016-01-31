@@ -28,16 +28,17 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
         this.firebase.unauth();
       },
       particle_login: function() {
-          var username = $("#particle_username").val();
-          var password = $("#particle_password").val();
-          this.data.login(username, password, function(status) {
-            console.log(status);
-          });
+        console.log("Particle Login");
+        var username = $("#particle_username").val();
+        var password = $("#particle_password").val();
+        this.data.bindAccessToken(username, password, function(status) {
+          console.log(status);
+        });
       },
       initialize: function() {
           $("#fb_login").click($.proxy(this.fb_login, this));
           $("#fb_logout").click($.proxy(this.fb_logout, this));
-          $("#setAuthToken").click($.proxy(this.particle_login, this));
+          $("#particle_login").click($.proxy(this.particle_login, this));
       }
   };
   return App;
