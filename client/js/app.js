@@ -2,8 +2,8 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
   function App() {
       var Firebase = require('firebase');
       this.firebase = new Firebase("https://lighting-controller.firebaseio.com");
-      this.data = new ParticleBase(this.firebase);
-      this.data.setAccessTokenCallback($.proxy(this.accessTokenCallback, this));
+      this.pb = new ParticleBase(this.firebase);
+      this.pb.setAccessTokenCallback($.proxy(this.accessTokenCallback, this));
       $(document).ready(this.initialize.apply(this));
   };
   App.prototype = {
@@ -23,13 +23,27 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
       },
       accessTokenCallback : function(status) {
         console.log("Access token callback: ", status);
+        var ref = this;
         if (status === ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN) {
-          this.data.listDevices(function(status, data) {
+          ref.pb.listDevices(function(status, data) {
             console.log("List devices status: ", status);
             console.log("Device list: ", data);
+            for (var key in data) {
+              ref.pb.saveDevice(data[key], function(error) {
+                if (!error) {
+                  ref.pb.getSavedDevices(function(error, data) {
+                    if (!error) {
+                      console.log("Saved devices: ", data);
+                    } else {
+                      console.log("Error retrieving saved devices: ", error);
+                    }
+                  });
+                } else {
+                  console.log("Error saving device: ", error);
+                }
+              });
+            }
           });
-          this.data.notifyAllDevicesOn(this.firebase.child('devices').child('configs').child('ownerships').child('particle_id'),
-            'value');
         }
       },
       fb_logout : function() {
@@ -39,7 +53,7 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
         console.log("Particle Login");
         var username = $("#particle_username").val();
         var password = $("#particle_password").val();
-        this.data.bindAccessToken(username, password, function(status) {
+        this.pb.bindAccessToken(username, password, function(status) {
           console.log(status);
         });
       },

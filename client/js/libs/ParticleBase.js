@@ -67,6 +67,18 @@ define([], function(require) {
       }
     };
 
+    function sanityCheck(callback) {
+      if (!firebaseLoggedIn()) {
+        callback(ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN);
+        return false;
+      }
+      if (!hasAccessToken()) {
+        callback(ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN);
+        return false;
+      }
+      return true;
+    }
+
 
     function hasAccessToken() {
       return ref.accessToken != null;
@@ -80,6 +92,46 @@ define([], function(require) {
       this.accessTokenCallback = callback;
     };
 
+    // This function lists "saved" devices. (See saveDevice)
+    // callback first parameter will be null on success, or an error message
+    // callback second parameter will be a JSON object containing saved devices
+    // (saved devices may be an empty JSON object)
+    this.getSavedDevices = function(callback) {
+      if (!sanityCheck()) {
+        return false;
+      }
+      this.firebase.child('ParticleBase').child('users').child('devices')
+        .child(this.firebase.getAuth().uid).once('value', function(dataSnapshot) {
+        if (!dataSnapshot) {
+          console.log("Device list was empty");
+          callback(null, { });
+        } else {
+          callback(null, dataSnapshot.val());
+        }
+      }, function(error) {
+        callback(ParticleBase.ERROR_PARTICLEBASE_LIST_DEVICES);
+      });
+    };
+
+    // A client may wish to track only some of a user's devices, instead of
+    // every Particle.io device available to the user. This mechanism
+    // "saves" devices
+    // callback receives null on success or an error message
+    this.saveDevice = function(deviceJson, callback) {
+      if (!sanityCheck()) {
+        return false;
+      }
+      this.firebase.child('ParticleBase/users/devices/')
+        .child(this.firebase.getAuth().uid).child(deviceJson.id)
+        .set(deviceJson, function(error) {
+          if (error) {
+            callback(ParticleBase.ERROR_PARTICLEBASE_SAVE_DEVICE);
+          } else {
+            callback(null);
+          }
+        });
+    };
+
     // Lists devices accessible with this user's access token
     // callback first parameter will be passed one of the following:
     // ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES
@@ -90,12 +142,8 @@ define([], function(require) {
     // If ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES then the
     // second callback parameter will be a list of devices
     this.listDevices = function(callback) {
-      if (!firebaseLoggedIn()) {
-        callback(ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN, null);
+      if (!sanityCheck(callback)) {
         return false;
-      }
-      if (!hasAccessToken()) {
-        callback(ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN, null);
       }
       var xhr = buildXHR("GET", "/v1/devices");
       xhr.setRequestHeader("Authorization", "Bearer " + this.accessToken);
@@ -116,21 +164,47 @@ define([], function(require) {
       return true;
     };
 
-    // device notification hook
+    // Simple device notification hook. Publishes an event with custon eventName,
+    // and data will be a JSON.stringify'd dataSnapshot.val()
     // params:
     // firebaseRef - reference to firebase child location for event notification
     // eventType - firebase event type ('value', 'child_changed', 'child_added', etc...)
-    // eventPublishName - Particle.io event name to publish (or default event name will be "ParticleBase")
     // callback - callback on firebase event with dataSnapshot as parameter (as per standard Firebase.on())
     // cancelCallback - callback when the event is removed (as per stadard Firebase.on())
     // context - "this" context for callback and cancelCallback (as per standard Firebase.on())
-    this.notifyAllDevicesOn = function(firebaseRef, eventType, eventPublishName, callback, cancelCallback, context) {
+    this.simplePublishOn = function(firebaseRef, event, eventName, callback, cancelCallback, context) {
+      var ref = this;
+      firebaseRef.on(eventType, function(dataSnapshot) {
+        ref.publishEvent(eventName, JSON.stringify(dataSnapshot.val()));
+        if (callback) {
+          callback.apply(context, [dataSnapshot]);
+        }
+      }, cancelCallback, context);
+    };
+
+    // device notification hook. Publishes an event called "ParticleBase"
+    // with JSON data:
+    // {
+    //    path : "/event/path",
+    //    firebase : "https://my-firebase.firebaseio.com",
+    //    eventType : eventType,
+    //    dataSnapshot : dataSnapshot.val()
+    // }
+    // params:
+    // firebaseRef - reference to firebase child location for event notification
+    // eventType - firebase event type ('value', 'child_changed', 'child_added', etc...)
+    // callback - callback on firebase event with dataSnapshot as parameter (as per standard Firebase.on())
+    // cancelCallback - callback when the event is removed (as per stadard Firebase.on())
+    // context - "this" context for callback and cancelCallback (as per standard Firebase.on())
+    this.publishOn = function(firebaseRef, eventType, callback, cancelCallback, context) {
       var ref = this;
       firebaseRef.on(eventType, function(dataSnapshot) {
         var json = { };
         json.path = dataSnapshot.ref().toString().substring(ref.firebase.root().ref().toString().length);
+        json.firebase = dataSnapshot.ref().root().toString();
+        json.eventType = eventType;
         json.dataSnapshot = dataSnapshot.val();
-        ref.publishEvent(eventPublishName ? eventPublishName : "ParticleBase",
+        ref.publishEvent("ParticleBase",
           JSON.stringify(json),
           function(status) {
             checkInvalidToken(status);
@@ -150,12 +224,7 @@ define([], function(require) {
     // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
     // ParticleBase.ERROR_PARTICLE_SERVER_ERROR
     this.publishEvent = function(eventName, data, callback) {
-      if (!firebaseLoggedIn()) {
-        callback(ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN);
-        return false;
-      }
-      if (!hasAccessToken()) {
-        callback(ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN);
+      if (!sanityCheck(callback)) {
         return false;
       }
       var xhr = buildXHR("POST", "/v1/devices/events");
@@ -183,12 +252,7 @@ define([], function(require) {
     // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
     // ParticleBase.ERROR_PARTICLE_SERVER_ERROR
     this.testToken = function(callback) {
-      if (!firebaseLoggedIn()) {
-        callback(ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN);
-        return false;
-      }
-      if (!hasAccessToken()) {
-        callback(ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN);
+      if (!sanityCheck(callback)) {
         return false;
       }
       var ref = this;
@@ -209,12 +273,8 @@ define([], function(require) {
     // If successful, the supplied Access Token Callback will be triggered
     // with status ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
     this.bindAccessToken = function(particle_username, particle_password, callback) {
-      if (!firebaseLoggedIn()) {
-        callback(ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN);
+      if (!sanityCheck(callback)) {
         return false;
-      }
-      if (!hasAccessToken()) {
-        callback(ParticleBase.ERROR_PARTICLEBASE_NO_ACCESS_TOKEN);
       }
       var xhr = buildXHR("POST", "/oauth/token");
       xhr.setRequestHeader ("Authorization", "Basic " + btoa("particle:particle"));
@@ -273,6 +333,8 @@ define([], function(require) {
   ParticleBase.SUCCESS_PARTICLE_REST_OPERATION = "Particle.io REST operation succeeded.";
   ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES = "Particle.io list device operation succeeded.";
   ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT = "Particle.io successfully published the event.";
+  ParticleBase.ERROR_PARTICLEBASE_LIST_DEVICES = "ParticleBase could not retrieve a list of saved devices.";
+  ParticleBase.ERROR_PARTICLEBASE_SAVE_DEVICE = "ParticleBase could not save a device JSON.";
 
   ParticleBase.prototype = {
     constructor: ParticleBase,
