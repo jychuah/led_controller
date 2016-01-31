@@ -49,6 +49,7 @@ define([], function(require) {
   ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN = "The access token for this Firebase user is currently invalid.";
   ParticleBase.SUCCESS_PARTICLE_REST_OPERATION = "Particle.io REST operation succeeded.";
   ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES = "Particle.io list device operation succeeded.";
+  ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT = "Particle.io successfully published the event.";
 
   ParticleBase.prototype = {
     constructor: ParticleBase,
@@ -89,12 +90,12 @@ define([], function(require) {
 
     // Lists devices accessible with this user's access token
     // callback first parameter will be passed one of the following:
-    // Particle.SUCCESS_PARTICLE_LIST_DEVICES
-    // Particle.ERROR_FIREBASE_NOT_LOGGED_IN
-    // Particle.ERROR_PARTICLE_UNREACHABLE
-    // Particle.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
-    // Particle.ERROR_PARTICLE_SERVER_ERROR
-    // If Particle.SUCCESS_PARTICLE_LIST_DEVICES then the
+    // ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES
+    // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
+    // ParticleBase.ERROR_PARTICLE_UNREACHABLE
+    // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
+    // ParticleBase.ERROR_PARTICLE_SERVER_ERROR
+    // If ParticleBase.SUCCESS_PARTICLE_LIST_DEVICES then the
     // second callback parameter will be a list of devices
     listDevices : function(callback) {
       if (!this.firebaseLoggedIn()) {
@@ -120,12 +121,41 @@ define([], function(require) {
       return true;
     },
 
+    // REST publish event wrapper
+    // callback first parameter will be passed one of the following:
+    // ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT
+    // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
+    // ParticleBase.ERROR_PARTICLE_UNREACHABLE
+    // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
+    // ParticleBase.ERROR_PARTICLE_SERVER_ERROR
+    publishEvent : function(eventName, data, callback) {
+      if (!this.firebaseLoggedIn()) {
+        callback(Particle.ERROR_FIREBASE_NOT_LOGGED_IN);
+        return false;
+      }
+      var xhr = this.buildXHR("POST", "/v1/devices/events");
+      xhr.setRequestHeader("Authorization", "Bearer " + this.accessToken);
+      var ref = this;
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 0 && xhr.status == 0) {
+          callback(ParticleBase.ERROR_PARTICLE_UNREACHABLE, null);
+          return false;
+        };
+        if (xhr.readyState == 4) {
+          var status = ref.getParticleXHRStatus(xhr.status, ParticleBase.SUCCESS_PARTICLE_PUBLISH_EVENT);
+          callback(status);
+          return true;
+        }
+      }
+      xhr.send("name=" + eventName + "&data=" + encodeURIComponent(data) + "&private=true&ttl=60");
+    }
+
     // callback will be passed one of the following:
-    // Particle.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
-    // Particle.ERROR_PARTICLE_UNREACHABLE
-    // Particle.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
-    // Particle.ERROR_FIREBASE_NOT_LOGGED_IN
-    // Particle.ERROR_PARTICLE_SERVER_ERROR
+    // ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
+    // ParticleBase.ERROR_PARTICLE_UNREACHABLE
+    // ParticleBase.ERROR_PARTICLEBASE_INVALID_ACCESS_TOKEN
+    // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
+    // ParticleBase.ERROR_PARTICLE_SERVER_ERROR
     testToken : function(callback) {
       if (!this.firebaseLoggedIn()) {
         callback(Particle.ERROR_FIREBASE_NOT_LOGGED_IN);
@@ -142,11 +172,11 @@ define([], function(require) {
     },
 
     // callback will be passed one of the following statuses:
-    // Particle.ERROR_FIREBASE_NOT_LOGGED_IN
-    // Particle.ERROR_PARTICLE_UNREACHABLE
-    // Particle.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN
-    // Particle.ERROR_PARTICLE_BAD_RESPONSE
-    // Particle.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
+    // ParticleBase.ERROR_FIREBASE_NOT_LOGGED_IN
+    // ParticleBase.ERROR_PARTICLE_UNREACHABLE
+    // ParticleBase.ERROR_FIREBASE_COULD_NOT_SET_PARTICLE_TOKEN
+    // ParticleBase.ERROR_PARTICLE_BAD_RESPONSE
+    // ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
     // If successful, the supplied Access Token Callback will be triggered
     // with status ParticleBase.SUCCESS_PARTICLEBASE_ACCESS_TOKEN
     bindAccessToken : function(particle_username, particle_password, callback) {
