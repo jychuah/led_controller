@@ -9,7 +9,8 @@ require.config({
       particlebase: "ParticleBase",
       app: "../app",
       "bootstrap" :  "bootstrap.min",
-      firebase : "firebase"
+      firebase : "firebase",
+      pbdevicesmodal : "pb-devices-modal/pb-devices-modal"
   }
 });
 

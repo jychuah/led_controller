@@ -1,4 +1,4 @@
-define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, ParticleBase) {
+define(['jquery', 'particlebase', 'pbdevicesmodal', 'firebase', 'bootstrap'], function($, ParticleBase, PBDevicesModal) {
   function App() {
       var Firebase = require('firebase');
       this.firebase = new Firebase("https://lighting-controller.firebaseio.com");
@@ -61,6 +61,8 @@ define(['jquery', 'particlebase', 'firebase', 'bootstrap'], function($, Particle
           $("#fb_login").click($.proxy(this.fb_login, this));
           $("#fb_logout").click($.proxy(this.fb_logout, this));
           $("#particle_login").click($.proxy(this.particle_login, this));
+          this.pbdevicesmodal = new PBDevicesModal(this.pb);
+
       }
   };
   return App;
