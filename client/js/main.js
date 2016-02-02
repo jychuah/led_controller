@@ -1,20 +1,21 @@
 require.config({
-  baseUrl: "js/libs",
+  baseUrl: "js",
   shim : {
         "bootstrap" : { "deps" :['jquery'] },
         "firebase" : { exports: 'Firebase' }
     },
   paths: {
-      jquery: "jquery-2.2.0.min",
-      particlebase: "ParticleBase",
-      app: "../app",
-      "bootstrap" :  "bootstrap.min",
-      firebase : "firebase",
+      jquery: "libs/jquery-2.2.0.min",
+      particlebase: "libs/ParticleBase",
+      app: "app",
+      "bootstrap" :  "libs/bootstrap.min",
+      firebase : "libs/firebase",
+      text: "libs/text"
   },
   packages: [
     {
       name: "pbdevicesmodal",
-      location :  "pb-devices-modal",
+      location :  "libs/pb-devices-modal",
       main: "pb-devices-modal"
     }
   ]
