@@ -10,8 +10,14 @@ require.config({
       app: "../app",
       "bootstrap" :  "bootstrap.min",
       firebase : "firebase",
-      pbdevicesmodal : "pb-devices-modal/pb-devices-modal"
-  }
+  },
+  packages: [
+    {
+      name: "pbdevicesmodal",
+      location :  "pb-devices-modal",
+      main: "pb-devices-modal"
+    }
+  ]
 });
 
 
